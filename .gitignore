@@ -42,3 +42,14 @@ data/Michigan/tif/USGS_13_n46w085.tif
 .Rhistory
 *.img
 *.tif
+*.tfw
+*.xml
+*.ovr
+*.cpg
+*.dbf
+*.zip
+data/Shapes/water.prj
+data/Shapes/water.sbn
+data/Shapes/water.sbx
+data/Shapes/water.shp
+data/Shapes/water.shx

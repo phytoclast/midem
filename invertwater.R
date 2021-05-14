@@ -1,0 +1,20 @@
+library(lidR)
+library(rgdal)
+library(rlas)
+library(mapview)
+library(progress)
+library(future)
+library(viridis)
+library(dplyr)
+library(stringr)
+library(terra)
+library(sf)
+library(filesstrings)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+water<- rast('data/Michigan/water.tif')
+water[!is.na(water)] <- 0
+water[is.na(water)] <- 1
+water[water == 0] <- NA
+writeRaster(water, 'tmp/water.tif', overwrite=TRUE, gdal=c("COMPRESS=LZW"))
+plot(water)
+water<- rast('tmp/water.tif')

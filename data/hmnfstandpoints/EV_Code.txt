@@ -1,0 +1,68 @@
+S_R09_FSVEG_Poly_OBJECTID,EV_COMMON_NAME,Cnt_EV_COMMON_NAME,First_EV_CODE
+-1,Aspen-white spruce/balsam fir,62,95
+-1,Balsam fir,1,24
+-1,Balsam fir-aspen/paper birch,188,11
+-1,Balsam poplar,15,94
+-1,Beech,22,86
+-1,Bigtooth aspen,3582,93
+-1,Black ash-American elm/red maple,367,71
+-1,Black cherry-white ash/yellow poplar,32,83
+-1,Black locust,3,88
+-1,"Black oak, scarlet oak, hickory",19,53
+-1,Black oak/scarlet oak/hickory,1792,53
+-1,Black spruce,63,12
+-1,"Cedar, aspen, paper birch",2,19
+-1,Cottonwood,1,73
+-1,Eastern white pine,692,3
+-1,Eastern white pine-hemlock,31,4
+-1,Eastern white pine-northern red oak/white ash,61,41
+-1,Hemlock,43,5
+-1,Jack Pine,1,1
+-1,Jack pine,2914,01
+-1,Jack pine-oak,1414,48
+-1,Lowland shrub,3,97
+-1,Lowland shrubs,1937,97
+-1,Mixed lowland hardwoods,397,79
+-1,Mixed northern hardwoods,875,21
+-1,Mixed oaks,3996,59
+-1,Mixed pines,99,30
+-1,Mixed swamp conifer,601,18
+-1,Mixed upland hardwoods,28,89
+-1,Northern hardwoods-hemlock,1,20
+-1,Northern pin oak,6,63
+-1,Northern red oak,948,55
+-1,Northern red oak-hickory-yellow pine,1,48
+-1,Northern white cedar-aspen/paper birch,82,19
+-1,Northern white-cedar,344,14
+-1,Norway spruce,1,7
+-1,Oak-aspen,250,47
+-1,Oak-eastern white pine,62,43
+-1,Open,405,99
+-1,Oak-hardwoods,3,
+-1,Open,5599,99
+-1,Paper birch,60,92
+-1,Pitch pine,1,38
+-1,Quaking aspen,351,91
+-1,Pin oak,1,
+-1,Quaking aspen,2681,91
+-1,Red maple (dry site),267,84
+-1,Red maple (wet site),606,76
+-1,Red pine,4871,02
+-1,Red pine-oak,809,49
+-1,Scotch pine,41,6
+-1,Sugar maple,117,85
+-1,"Sugar maple, beech, yellow birch",6,81
+-1,Sugar maple-basswood,110,82
+-1,Sugar maple-beech-yellow birch/red spruce,2,87
+-1,Sugar maple-beech/yellow birch,863,81
+-1,Tamarack,55,15
+-1,Upland shrubs,92,98
+-1,Sugar maple-northern red oak,1,
+-1,Upland shrubs,217,98
+-1,White oak,184,54
+-1,White pine,3,03
+-1,"White spruce, basalm fir norway spruce",1,16
+-1,White spruce-basalm fir,83,16
+-1,,0,0
+-1,White spruce-balsam fir-aspen,1,
+-1,,0,0

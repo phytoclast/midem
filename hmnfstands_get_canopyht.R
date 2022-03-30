@@ -33,19 +33,27 @@ hmnf.chm <- cbind(hmnf.mi, subset(hmnf.chm.max, chm=hmnf.chm[,2]))
 hmnf.chm <- cbind(hmnf.chm, subset(hmnf.chm.mean, chm=hmnf.chm[,2]))
 hmnf.chm <- hmnf.chm %>% left_join(EV_Code, by=c('EV_CODE'='First_EV_CODE'))
 hmnf.chm$age <- 2021-hmnf.chm$YEAR_OF_ORIGIN
+hmnf.chm$lmapunitiid <- hmnf.chm$HMNF_MapunitRaster_10m
 colnames(hmnf.chm)
 hmnf.chm <-  subset(hmnf.chm, select=c("Lat","Long","EV_CODE","YEAR_OF_ORIGIN","SITE_INDEX","SITE_INDEX_SPP","SITE_INDEX_REF",
-                                       "chm.max", "chm.mean","type","age")) %>% st_drop_geometry()
+                                       "lmapunitiid", "chm.max", "chm.mean","type","age")) %>% st_drop_geometry()
 write.csv(hmnf.chm, 'data/hmnfstandpoints/hmnf.chm.csv', row.names = F)
 saveRDS(hmnf.chm, 'data/hmnfstandpoints/hmnf.chm.RDS')
 #############################
 #############################
+library(sf)
+library(terra)
+library(raster)
+library(minpack.lm)
+library(growthmodels)
+library(dplyr)
+library(ggplot2)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 hmnf.chm <- readRDS('data/hmnfstandpoints/hmnf.chm.RDS')
 
 hmnf.chm$chm <- hmnf.chm$chm.max
 
-library(ggplot2)
 ggplot(data=hmnf.chm)+
 geom_point(aes(x=age, y=chm), col='red', alpha=0.02)
 
@@ -179,5 +187,110 @@ ggplot()+
   scale_x_continuous(name = 'age (years)')+
   scale_y_continuous(name = 'canopy height (meters)')
   
-  
+#############################
+#acquire topographic covariates
+#############################
+library(sf)
+library(terra)
+library(raster)
+library(minpack.lm)
+library(growthmodels)
+library(dplyr)
+library(ggplot2)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
+hmnf.chm <- readRDS('data/hmnfstandpoints/hmnf.chm.RDS')
+
+hmnf.chm$chm <- hmnf.chm$chm.max
+
+solar <- rast('D:/GIS/DEM/hmnfsolarmean.tif'); names(solar) = 'solar'
+twi <- rast('D:/GIS/DEM/hmnftwi.tif'); names(twi) = 'twi'
+tpi <- rast('D:/GIS/DEM/hmnftopographicpositionindex.tif'); names(tpi) = 'tpi'
+dem <- rast('D:/GIS/DEM/hmnfdem30.tif'); names(dem) = 'dem'
+slope <- rast('D:/GIS/DEM/hmnfslope.tif'); names(slope) = 'slope'
+aspect <- rast('D:/GIS/DEM/hmnfaspect.tif'); names(aspect) = 'aspect'
+bt <- rast('D:/scripts/snow/output/bt.90.alt.tif'); names(bt) = 'bt'
+tgs <- rast('D:/scripts/snow/output/tgs.90.alt.tif'); names(tgs) = 'tgs'
+ppt <- rast('C:/a/Ecological_Sites/GIS/Climate/PRISM2010/P/p0112/w001001.adf'); names(ppt) = 'ppt'
+
+bt <- project(bt, dem)
+tgs <- project(tgs, dem)
+ppt <- project(ppt, dem)
+
+brk <- c(solar, twi, tpi, dem, slope, aspect, bt, tgs, ppt)
+
+hmnf.pts <- subset(hmnf.chm, select=c(Lat, Long))
+
+hmnf.pts <- st_as_sf(hmnf.pts, coords=c(x='Long', y='Lat'), crs='epsg:4326', remove = FALSE)
+hmnf.pts <- sf::st_transform(hmnf.pts, crs=crs(dem))
+hmnf.pts <- terra::extract(brk, vect(hmnf.pts))
+hmnf.chm1 <- cbind(hmnf.chm, hmnf.pts)
+hmnf.chm1$ID <- NULL
+
+write.csv(hmnf.chm1, 'output/hmnf.chm1.csv', row.names = F)
+#############################
+#acquire soil covariates
+#############################
+
+library(sf)
+library(terra)
+library(raster)
+library(minpack.lm)
+library(growthmodels)
+library(dplyr)
+library(ggplot2)
+library(Hmisc)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+hmnf.chm <- read.csv('output/hmnf.chm1.csv')
+
+s <- read.csv('C:/workspace/SoilSorts/fy2021-refresh/s.csv')
+colnames(s)
+s.mu <- s %>% group_by(lmapunitiid=lmapunitiid) %>% summarise(
+  T150_AWC = wtd.mean(T150_AWC, weights=comppct_r, na.rm=T),
+  T50_sand = wtd.mean(T50_sand, weights=comppct_r, na.rm=T),
+  T150_sand = wtd.mean(T150_sand, weights=comppct_r, na.rm=T),
+  T50_clay = wtd.mean(T50_clay, weights=comppct_r, na.rm=T),
+  T150_clay = wtd.mean(T150_clay, weights=comppct_r, na.rm=T),
+  T50_OM = wtd.mean(T50_OM, weights=comppct_r, na.rm=T),
+  T150_OM = wtd.mean(T150_OM, weights=comppct_r, na.rm=T),
+  T50_pH = wtd.mean(T50_pH, weights=comppct_r, na.rm=T),
+  Water_Table = wtd.mean(Water_Table, weights=comppct_r, na.rm=T)
+  )
+
+
+mufilter <- unique(hmnf.chm$lmapunitiid)
+hmnf.chm1 <- left_join(hmnf.chm, s.mu)
+write.csv(hmnf.chm1, 'output/hmnf.chm2.csv', row.names = F)
+
+#############################
+#analysis
+#############################
+
+library(sf)
+library(terra)
+library(raster)
+library(minpack.lm)
+library(growthmodels)
+library(dplyr)
+library(ggplot2)
+library(Hmisc)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+hmnf.chm <- read.csv('output/hmnf.chm2.csv')
+
+hmnf.chm <- subset()
+c.table <- as.data.frame(cor(hmnf.chm[,c("chm.max", "chm.mean","age","solar",
+"twi","tpi","dem","slope","aspect","bt","tgs",
+"ppt","T150_AWC","T50_sand","T150_sand","T50_clay","T150_clay","T50_OM",
+"T150_OM","T50_pH","Water_Table")], use='complete.obs'
+))
+
+write.csv(c.table, 'output/c.table.csv', row.names = F)
+
+model <- lm(chm.max~age+solar+
+            twi+tpi+dem+slope+aspect+bt+tgs+
+            ppt+T150_AWC+T50_sand+T150_sand+T50_clay+T150_clay+T50_OM+
+            T150_OM+T50_pH+Water_Table, data=hmnf.chm)
+
+summary(model)

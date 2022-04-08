@@ -630,11 +630,48 @@ ggplot()+
   scale_x_continuous(name='topographic position')
 
 library(rpart)
-
+port$position <- (port$toi2 - median(port$toi2))/(median(port$toi2)-min(port$toi2))*100
+port$sunslope <- (port$d1230 - median(port$d1230))/(median(port$d1230)-min(port$d1230))*100
+port$elevation <- port$dem
 rp <- rpart(chm~
-        toi2+toi+toip+toin+dem+d1230, data = port)
+              position+sunslope+elevation, data = port)
 rpart.plot::rpart.plot(rp)
 
+
+ggplot()+
+  geom_smooth(aes(x=position, y=chm, col='GSMNP'), data= port)+
+  scale_color_manual(name='site',  values = c('GSMNP'='green'))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='topographic position')
+ggplot()+
+  geom_smooth(aes(x=sunslope, y=chm, col='GSMNP'), data= port)+
+  scale_color_manual(name='site',  values = c('GSMNP'='green'))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='sunslope')
+
+exposedridge <- subset(port, position >=50 & sunslope >=50)
+medianslope <- subset(port,  position >= -50 & position < 50 & sunslope >= -50 & sunslope < 50)
+shadycove <- subset(port, position < -50 & sunslope < -50) 
+cove <- subset(port, position < -50 & sunslope >= -50 & sunslope < 50) 
+ridge <- subset(port, position >= 50 & sunslope >= -50 & sunslope < 50) 
+shadyslope <- subset(port, position >= -50 & position < 50 & sunslope < -50) 
+sunnyslope <- subset(port, position >= -50 & position < 50 & sunslope >= 50)
+
+ggplot()+
+  geom_smooth(aes(x=elevation, y=chm, col='sunny ridge'), data= exposedridge)+
+  geom_smooth(aes(x=elevation, y=chm, col='ridge'), data= ridge)+
+  geom_smooth(aes(x=elevation, y=chm, col='sunny slope'), data= sunnyslope)+
+  geom_smooth(aes(x=elevation, y=chm, col='median slope'), data= medianslope)+
+  geom_smooth(aes(x=elevation, y=chm, col='shady slope'), data= shadyslope)+
+  geom_smooth(aes(x=elevation, y=chm, col='cove'), data= cove)+
+  geom_smooth(aes(x=elevation, y=chm, col='shady cove'), data= shadycove)+
+  #geom_smooth(aes(x=elevation, y=chm, col='average slope'), data= port)+
+  scale_color_manual(name='site',  values = c('sunny ridge'='red','ridge'='orange','sunny slope'='yellow',
+                                              'median slope'='green',
+                                              'shady slope'='darkgreen','cove'='cyan','shady cove'='blue'
+                                              ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='elevation', breaks=c((0:5)*500))
 
 rp <- rpart(chm~
               dem+toi+toip+toin+tpi+slope+aspect, data = kat)

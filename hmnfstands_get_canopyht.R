@@ -478,10 +478,14 @@ summary(aspen.model)
 summary(oak.model)
 summary(maple.model)
 
+hmnf.chm$position <- (hmnf.chm$toi - median(hmnf.chm$toi))/(median(hmnf.chm$toi) - min(hmnf.chm$toi))
+hmnf.chm$sunslope <- (hmnf.chm$solar - median(hmnf.chm$solar))/(median(hmnf.chm$solar) - min(hmnf.chm$solar))
+hmnf.chm$elevation <- hmnf.chm$dem
 
-soilsubset <- subset(hmnf.chm, T150_AWC < 15 & spodosols > 0.5 & Water_Table > 150)
-soilsubset <- subset(soilsubset, slope.500 >= 0.05 & slope >= atan(0.0))
-
+soilsubset <- subset(hmnf.chm, T150_AWC < 15 & spodosols < 0.5 & Water_Table > 150 & age > 5 & chm > 1)
+#soilsubset <- subset(soilsubset, slope.500 >= 0.05 & slope >= atan(0.0))
+#soilsubset <- subset(soilsubset, slope.500 >= 0.05 & slope >= atan(0.0))
+soilsubset <- hmnf.chm
 jackpine <- subset(soilsubset, jackpine %in% 1)
 redpine <- subset(soilsubset, redpine %in% 1)
 whitepine <- subset(soilsubset, whitepine %in% 1)
@@ -490,17 +494,196 @@ oak <- subset(soilsubset, oak %in% 1)
 maple <- subset(soilsubset, maple %in% 1)
 
 
+ggplot()+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='maple'), data = maple)+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='oak'), data = oak)+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='aspen'), data = aspen)+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='white pine'), data = whitepine)+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='red pine'), data = redpine)+
+  geom_smooth(aes(x=sunslope, y=chm.max, weight = age, col='jack pine'), data = jackpine)+
+  scale_color_manual(name='forest type',  values = c('jack pine'='green','red pine'='darkgreen','white pine'='darkcyan',
+                                                     'aspen'='khaki4','oak'='orange','maple'='red'))
+ggplot()+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='maple'), data = maple)+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='oak'), data = oak)+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='aspen'), data = aspen)+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='white pine'), data = whitepine)+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='red pine'), data = redpine)+
+  geom_smooth(aes(x=position, y=chm.max, weight = age, col='jack pine'), data = jackpine)+
+  scale_color_manual(name='forest type',  values = c('jack pine'='green','red pine'='darkgreen','white pine'='darkcyan',
+                                                     'aspen'='khaki4','oak'='orange','maple'='red'))
 
 
 ggplot()+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='maple'), data = maple)+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='oak'), data = oak)+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='aspen'), data = aspen)+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='white pine'), data = whitepine)+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='red pine'), data = redpine)+
-  geom_smooth(aes(x=toip, y=chm.max, weight = age, col='jack pine'), data = jackpine)+
+  geom_smooth(aes(x=age, y=chm.max, col='maple'), data = maple)+
+  geom_smooth(aes(x=age, y=chm.max, col='oak'), data = oak)+
+  geom_smooth(aes(x=age, y=chm.max, col='aspen'), data = aspen)+
+  geom_smooth(aes(x=age, y=chm.max, col='white pine'), data = whitepine)+
+  geom_smooth(aes(x=age, y=chm.max, col='red pine'), data = redpine)+
+  geom_smooth(aes(x=age, y=chm.max, col='jack pine'), data = jackpine)+
   scale_color_manual(name='forest type',  values = c('jack pine'='green','red pine'='darkgreen','white pine'='darkcyan',
-                                   'aspen'='khaki4','oak'='orange','maple'='red'))
+                                                     'aspen'='khaki4','oak'='orange','maple'='red'))
+
+exposedridge <- subset(oak, position >=.50 & sunslope >=.50)
+medianslope <- subset(oak,  position >= -.50 & position < .50 & sunslope >= -.50 & sunslope < .50)
+shadycove <- subset(oak, position < -.50 & sunslope < -.50) 
+cove <- subset(oak, position < -.50 )#& sunslope >= -.50 & sunslope < .50) 
+ridge <- subset(oak, position >= .50 )# & sunslope >= -.50 & sunslope < .50) 
+shadyslope <- subset(oak, position >= -.50 & position < .50 & sunslope < -.50) 
+sunnyslope <- subset(oak, position >= -.50 & position < .50 & sunslope >= .50)
+
+ggplot()+
+  #geom_smooth(aes(x=age, y=chm, col='sunny ridge'), data= exposedridge)+
+  geom_smooth(aes(x=age, y=chm, col='ridge'), data= ridge)+
+  #geom_smooth(aes(x=age, y=chm, col='sunny slope'), data= sunnyslope)+
+  geom_smooth(aes(x=age, y=chm, col='median slope'), data= medianslope)+
+  geom_smooth(aes(x=age, y=chm, col='shady slope'), data= shadyslope)+
+  geom_smooth(aes(x=age, y=chm, col='cove'), data= cove)+
+  geom_smooth(aes(x=age, y=chm, col='shady cove'), data= shadycove)+
+  geom_smooth(aes(x=age, y=chm, col='all slopes'), data= oak)+
+  scale_color_manual(name='site',  values = c('all slopes'='black','sunny ridge'='red','ridge'='orange','sunny slope'='yellow',
+                                              'median slope'='green',
+                                              'shady slope'='darkgreen','cove'='cyan','shady cove'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Oak')
+
+
+exposedridge <- subset(whitepine, position >=.50 & sunslope >=.50)
+medianslope <- subset(whitepine,  position >= -.50 & position < .50 & sunslope >= -.50 & sunslope < .50)
+shadycove <- subset(whitepine, position < -.50 & sunslope < -.50) 
+cove <- subset(whitepine, position < -.50  )#& sunslope >= -.50 & sunslope < .50) 
+ridge <- subset(whitepine, position >= .50  )#& sunslope >= -.50 & sunslope < .50) 
+shadyslope <- subset(whitepine, position >= -.50 & position < .50 & sunslope < -.50) 
+sunnyslope <- subset(whitepine, position >= -.50 & position < .50 & sunslope >= .50)
+
+ggplot()+
+  #geom_smooth(aes(x=age, y=chm, col='sunny ridge'), data= exposedridge)+
+  #geom_smooth(aes(x=age, y=chm, col='ridge'), data= ridge)+
+  #geom_smooth(aes(x=age, y=chm, col='sunny slope'), data= sunnyslope)+
+  geom_smooth(aes(x=age, y=chm, col='median slope'), data= medianslope)+
+  geom_smooth(aes(x=age, y=chm, col='shady slope'), data= shadyslope)+
+  geom_smooth(aes(x=age, y=chm, col='cove'), data= cove)+
+  geom_smooth(aes(x=age, y=chm, col='shady cove'), data= shadycove)+
+  geom_smooth(aes(x=age, y=chm, col='all slopes'), data= whitepine)+
+  scale_color_manual(name='site',  values = c('all slope'='black','sunny ridge'='red','ridge'='orange','sunny slope'='yellow',
+                                              'median slope'='green',
+                                              'shady slope'='darkgreen','cove'='cyan','shady cove'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'white pine')
+
+
+exposedridge <- subset(maple, position >=.50 & sunslope >=.50)
+medianslope <- subset(maple,  position >= -.50 & position < .50 & sunslope >= -.50 & sunslope < .50)
+shadycove <- subset(maple, position < -.50 & sunslope < -.50) 
+cove <- subset(maple, position < -.50  )#& sunslope >= -.50 & sunslope < .50) 
+ridge <- subset(maple, position >= .50  )#& sunslope >= -.50 & sunslope < .50) 
+shadyslope <- subset(maple, position >= -.50 & position < .50 & sunslope < -.50) 
+sunnyslope <- subset(maple, position >= -.50 & position < .50 & sunslope >= .50)
+
+ggplot()+
+  #geom_smooth(aes(x=age, y=chm, col='sunny ridge'), data= exposedridge)+
+  geom_smooth(aes(x=age, y=chm, col='ridge'), data= ridge)+
+  #geom_smooth(aes(x=age, y=chm, col='sunny slope'), data= sunnyslope)+
+  geom_smooth(aes(x=age, y=chm, col='median slope'), data= medianslope)+
+  geom_smooth(aes(x=age, y=chm, col='shady slope'), data= shadyslope)+
+  geom_smooth(aes(x=age, y=chm, col='cove'), data= cove)+
+  #geom_smooth(aes(x=age, y=chm, col='shady cove'), data= shadycove)+
+  geom_smooth(aes(x=age, y=chm, col='all slopes'), data= maple)+
+  scale_color_manual(name='site',  values = c('all slope'='black','sunny ridge'='red','ridge'='orange','sunny slope'='yellow',
+                                              'median slope'='green',
+                                              'shady slope'='darkgreen','cove'='cyan','shady cove'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'maple')
+
+exposedridge <- subset(aspen, position >=.50 & sunslope >=.50)
+medianslope <- subset(aspen,  position >= -.50 & position < .50 & sunslope >= -.50 & sunslope < .50)
+shadycove <- subset(aspen, position < -.50 & sunslope < -.50) 
+cove <- subset(aspen, position < -.50  )#& sunslope >= -.50 & sunslope < .50) 
+ridge <- subset(aspen, position >= .50  )#& sunslope >= -.50 & sunslope < .50) 
+shadyslope <- subset(aspen, position >= -.50 & position < .50 & sunslope < -.50) 
+sunnyslope <- subset(aspen, position >= -.50 & position < .50 & sunslope >= .50)
+
+ggplot()+
+  #geom_smooth(aes(x=age, y=chm, col='sunny ridge'), data= exposedridge)+
+  geom_smooth(aes(x=age, y=chm, col='ridge'), data= ridge)+
+  #geom_smooth(aes(x=age, y=chm, col='sunny slope'), data= sunnyslope)+
+  geom_smooth(aes(x=age, y=chm, col='median slope'), data= medianslope)+
+  geom_smooth(aes(x=age, y=chm, col='shady slope'), data= shadyslope)+
+  geom_smooth(aes(x=age, y=chm, col='cove'), data= cove)+
+  #geom_smooth(aes(x=age, y=chm, col='shady cove'), data= shadycove)+
+  geom_smooth(aes(x=age, y=chm, col='all slopes'), data= aspen)+
+  scale_color_manual(name='site',  values = c('all slope'='black','sunny ridge'='red','ridge'='orange','sunny slope'='yellow',
+                                              'median slope'='green',
+                                              'shady slope'='darkgreen','cove'='cyan','shady cove'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Aspen')
+
+
+spodic <- subset(hmnf.chm, T150_AWC < 15 & spodosols > 0.5 & Water_Table > 150 & age > 5 & chm > 1 & aspen %in% 1)
+entic <- subset(hmnf.chm, T150_AWC < 15 & spodosols < 0.5 & Water_Table > 150 & age > 5 & chm > 1 & aspen %in% 1)
+mwdsand <- subset(hmnf.chm, T150_AWC < 15 & spodosols > -1 & Water_Table > 75 & Water_Table < 150 & age > 5 & chm > 1 & aspen %in% 1)
+spdsand <- subset(hmnf.chm, T150_AWC < 15 & spodosols > -1 & Water_Table > 25 & Water_Table < 75 & age > 5 & chm > 1 & aspen %in% 1)
+loamy <- subset(hmnf.chm, T150_AWC >= 15 & spodosols > -1 & Water_Table > 25 & age > 5 & chm > 1 & aspen %in% 1)
+acidwet <- subset(hmnf.chm,  (spodosols > 0.5 | T50_pH < 5.5) & Water_Table < 25 & age > 5 & chm > 1 & aspen %in% 1)
+basicwet <- subset(hmnf.chm, (spodosols < 0.5 & T50_pH >= 5.5) & Water_Table > 150 & age > 5 & chm > 1 & aspen %in% 1)
+aspen <- subset(hmnf.chm, age > 5 & chm > 1 & aspen %in% 1)
+
+ggplot()+
+  geom_smooth(aes(x=age, y=chm, col='spodic'), data= spodic)+
+  geom_smooth(aes(x=age, y=chm, col='entic'), data= entic)+
+  geom_smooth(aes(x=age, y=chm, col='mwdsand'), data= mwdsand)+
+  geom_smooth(aes(x=age, y=chm, col='spdsand'), data= spdsand)+
+  geom_smooth(aes(x=age, y=chm, col='loamy'), data= loamy)+
+  geom_smooth(aes(x=age, y=chm, col='acidwet'), data= acidwet)+
+  geom_smooth(aes(x=age, y=chm, col='basicwet'), data= basicwet)+
+  geom_smooth(aes(x=age, y=chm, col='all soils'), data= aspen)+
+  scale_color_manual(name='site',  values = c('all soils'='black','entic'='red','spodic'='orange','mwdsand'='yellow',
+                                              'spdsand'='green',
+                                              'loamy'='darkgreen','acidwet'='cyan','basicwet'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Aspen')
+
+spodic <- subset(hmnf.chm, T150_AWC < 15 & spodosols > 0.5 & Water_Table > 150 & age > 5 & chm > 1 & oak %in% 1)
+entic <- subset(hmnf.chm, T150_AWC < 15 & spodosols < 0.5 & Water_Table > 150 & age > 5 & chm > 1 & oak %in% 1)
+mwdsand <- subset(hmnf.chm, T150_AWC < 15 & spodosols > -1 & Water_Table > 75 & Water_Table < 150 & age > 5 & chm > 1 & oak %in% 1)
+spdsand <- subset(hmnf.chm, T150_AWC < 15 & spodosols > -1 & Water_Table > 25 & Water_Table < 75 & age > 5 & chm > 1 & oak %in% 1)
+loamy <- subset(hmnf.chm, T150_AWC >= 15 & spodosols > -1 & Water_Table > 25 & age > 5 & chm > 1 & oak %in% 1)
+acidwet <- subset(hmnf.chm,  (spodosols > 0.5 | T50_pH < 5.5) & Water_Table < 25 & age > 5 & chm > 1 & oak %in% 1)
+basicwet <- subset(hmnf.chm, (spodosols < 0.5 & T50_pH >= 5.5) & Water_Table > 150 & age > 5 & chm > 1 & oak %in% 1)
+oak <- subset(hmnf.chm, age > 5 & chm > 1 & oak %in% 1)
+
+ggplot()+
+  geom_smooth(aes(x=age, y=chm, col='spodic'), data= spodic)+
+  geom_smooth(aes(x=age, y=chm, col='entic'), data= entic)+
+  geom_smooth(aes(x=age, y=chm, col='mwdsand'), data= mwdsand)+
+  geom_smooth(aes(x=age, y=chm, col='spdsand'), data= spdsand)+
+  geom_smooth(aes(x=age, y=chm, col='loamy'), data= loamy)+
+  geom_smooth(aes(x=age, y=chm, col='acidwet'), data= acidwet)+
+  geom_smooth(aes(x=age, y=chm, col='basicwet'), data= basicwet)+
+  geom_smooth(aes(x=age, y=chm, col='all soils'), data= oak)+
+  scale_color_manual(name='site',  values = c('all soils'='black','entic'='red','spodic'='orange','mwdsand'='yellow',
+                                              'spdsand'='green',
+                                              'loamy'='darkgreen','acidwet'='cyan','basicwet'='blue'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
+  coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Oak')
 
 ### other mountains  ----
 ### 
@@ -673,6 +856,9 @@ ggplot()+
   scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
   scale_x_continuous(name='elevation', breaks=c((0:5)*500))
 
+kat$position <- (kat$toi - median(kat$toi))/(median(kat$toi)-min(kat$toi))*100
+kat$sunslope <- (kat$south - median(kat$south))/(median(kat$south)-min(kat$south))*100
+kat$elevation <- kat$dem
 rp <- rpart(chm~
-              dem+toi+toip+toin+tpi+slope+aspect, data = kat)
+              position+sunslope+elevation, data = kat)
 rpart.plot::rpart.plot(rp)

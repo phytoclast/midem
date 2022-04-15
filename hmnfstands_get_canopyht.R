@@ -697,6 +697,7 @@ library(dplyr)
 library(ggplot2)
 library(Hmisc)
 library(MASS)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 katahdin <- rast('data/lidar/katahdin.tif')
 bullhead <- rast('data/lidar/bullrun.tif')
@@ -862,3 +863,45 @@ kat$elevation <- kat$dem
 rp <- rpart(chm~
               position+sunslope+elevation, data = kat)
 rpart.plot::rpart.plot(rp)
+
+#mtlaff ----
+mtlaff <- rast('data/lidar/mtlaff-slopeaspecpositivenegative.tif')
+mtlaff.solar <- rast('data/lidar/mtlaff-insolation.tif')
+mtlaff.solar.annual <- mean(port.solar)
+plot(mtlaff.solar.annual)
+names(mtlaff) <- c("dem","slope","aspect","toip","toin","chm")
+names(mtlaff.solar) <- c('d0101','d0127','d0222','d0319','d0414','d0510','d0605','d0701','d0727','d0822','d0917','d1013','d1108','d1204','d1230')
+lafcomb <- c(mtlaff, mtlaff.solar)
+laf <- as.data.frame(lafcomb, xy=T)
+
+model <- lm(chm ~ dem+toip+toin+d1230+d0701+d0414, data=laf)
+summary(model)
+
+laf$chm.p <- predict(model, laf)
+laf$chm.r <- laf$chm - laf$chm.p
+laf <- laf %>% mutate(p.rank = percent_rank(chm.r), chm.rank = percent_rank(chm))
+laf.s <- subset(laf, p.rank > 0.05 & p.rank < 0.95 & p.rank < 0.97)
+ggplot()+
+  geom_point(aes(x=dem, y=chm), data=laf.s, alpha=0.05)
+
+model <- lm(chm ~ dem+toip+toin+d1230+d0701, data=laf.s)
+summary(model)
+laf$chm.p2 <- predict(model, laf)
+pchm.lm <- rast(cbind(x=laf$x,y=laf$y,z=laf$chm.p2), type="xyz", crs=crs(mtlaff$dem))
+names(pchm.lm) <- 'pchm.lm'
+plot(pchm.lm)
+writeRaster(pchm.lm, 'data/lidar/mtlaff-pchm.lm.tif')
+library(ranger)
+rf <- ranger(chm ~ slope+dem+toip+toin+d1230+d0701, data=laf.s, 
+             num.trees=500, sample.fraction =0.01, 
+             max.depth = 15,  write.forest = TRUE)
+laf$chm.p3 <-predictions(predict(rf, data=laf))
+pchm.rf <- rast(cbind(x=laf$x,y=laf$y,z=laf$chm.p3), type="xyz", crs=crs(mtlaff$dem))
+names(pchm.rf) <- 'pchm.rf'
+plot(pchm.rf)
+writeRaster(pchm.rf, 'data/lidar/mtlaff-pchm.rf.tif')
+chm.x <- rast(cbind(x=laf.s$x,y=laf.s$y,z=laf.s$chm), type="xyz", crs=crs(mtlaff$dem))
+names(chm.x) <- 'chm.x'
+plot(chm.x)
+writeRaster(chm.x, 'data/lidar/mtlaff-chm.x.tif')
+

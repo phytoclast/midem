@@ -298,6 +298,7 @@ library(dplyr)
 library(ggplot2)
 library(Hmisc)
 library(MASS)
+library(ranger)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 hmnf.chm <- read.csv('output/hmnf.chm2.csv')
@@ -684,6 +685,87 @@ ggplot()+
   scale_x_continuous(name='age (years)', breaks=c((0:50)*5))+
   coord_fixed(ratio=2/1,ylim=c(0,40))+
   labs(title = 'Oak')
+
+#randomforest----
+#
+hmnf.chm2 <- hmnf.chm
+hmnf.chm2$age <- 0
+hmnf.chm2$chm.max <- 0
+hmnf.chm2 <- rbind(hmnf.chm, hmnf.chm2)
+
+aspen <- subset(hmnf.chm2, aspen %in% 1)
+redpine <- subset(hmnf.chm2, redpine %in% 1)
+whitepine <- subset(hmnf.chm2, whitepine %in% 1)
+oak <- subset(hmnf.chm2, oak %in% 1)
+jackpine <- subset(hmnf.chm2, jackpine %in% 1)
+mod1 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = aspen)
+mod2 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = redpine)
+mod3 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = whitepine)
+mod4 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = oak)
+mod5 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = jackpine)
+
+x1 <- 0:200
+pred1 <-  predict(mod1, list(age = x1))
+pred2 <-  predict(mod2, list(age = x1))
+pred3 <-  predict(mod3, list(age = x1))
+pred4 <-  predict(mod4, list(age = x1))
+pred5 <-  predict(mod5, list(age = x1))
+ggplot()+
+  geom_line(aes(x=x1,y=pred1), col='black')+
+  geom_line(aes(x=x1,y=pred2), col='red')+
+  geom_line(aes(x=x1,y=pred3), col='blue')+
+  geom_line(aes(x=x1,y=pred4), col='yellow')+
+  geom_line(aes(x=x1,y=pred5), col='green')
+
+hmnf.chm2$pred1 <-  predict(mod1, list(age = hmnf.chm2$age))
+hmnf.chm2$pred2 <-  predict(mod2, list(age = hmnf.chm2$age))
+
+
+
+
+rf <- ranger(chm.max~
+           solar+
+           hilly+
+           age+
+           pred1+
+           pred2+
+           toip+
+           toin+
+           bt+
+           tgs+
+           ppt+
+           T150_AWC+
+           T50_sand+
+           T150_sand+
+           T50_clay+
+           T150_clay+
+           T50_OM+
+           T150_OM+
+           T50_pH+
+           Water_Table+
+           wet+
+           spodic+
+           carbdepth+
+           Bhs+
+           jackpine+
+           redpine+
+           whitepine+
+           aspen+
+           oak+
+           maple
+         , data=hmnf.chm2,
+         num.trees=500, sample.fraction =0.01, 
+         max.depth = 15,  write.forest = TRUE)
+
+hmnf.chm.25 <- hmnf.chm2 %>% mutate(age=25, pred1 = predict(mod1, list(age = 25)))
+hmnf.chm.50 <- hmnf.chm2
+hmnf.chm.75 <- hmnf.chm2
+hmnf.chm.100 <- hmnf.chm2
+hmnf.chm.150 <- hmnf.chm2
+hmnf.chm.200 <- hmnf.chm2
+
+
+
 
 ### other mountains  ----
 ### 

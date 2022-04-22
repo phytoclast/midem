@@ -693,40 +693,86 @@ hmnf.chm2$age <- 0
 hmnf.chm2$chm.max <- 0
 hmnf.chm2 <- rbind(hmnf.chm, hmnf.chm2)
 
-aspen <- subset(hmnf.chm2, aspen %in% 1)
-redpine <- subset(hmnf.chm2, redpine %in% 1)
-whitepine <- subset(hmnf.chm2, whitepine %in% 1)
-oak <- subset(hmnf.chm2, oak %in% 1)
-jackpine <- subset(hmnf.chm2, jackpine %in% 1)
-mod1 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = aspen)
-mod2 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = redpine)
-mod3 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = whitepine)
-mod4 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = oak)
-mod5 <- nlsLM(chm.max ~ growthmodels::gompertz(age, alpha, beta, k), start = list(alpha = 30, beta = 1, k = 1), data = jackpine)
 
-x1 <- 0:200
+x1 <- 0:500
 pred1 <-  predict(mod1, list(age = x1))
 pred2 <-  predict(mod2, list(age = x1))
 pred3 <-  predict(mod3, list(age = x1))
 pred4 <-  predict(mod4, list(age = x1))
 pred5 <-  predict(mod5, list(age = x1))
-ggplot()+
-  geom_line(aes(x=x1,y=pred1), col='black')+
-  geom_line(aes(x=x1,y=pred2), col='red')+
-  geom_line(aes(x=x1,y=pred3), col='blue')+
-  geom_line(aes(x=x1,y=pred4), col='yellow')+
-  geom_line(aes(x=x1,y=pred5), col='green')
 
-hmnf.chm2$pred1 <-  predict(mod1, list(age = hmnf.chm2$age))
-hmnf.chm2$pred2 <-  predict(mod2, list(age = hmnf.chm2$age))
+rpmod <- function(age){
+b0= 2.0434
+b1= 0.9978
+b2= -0.0147
+b3= 1.0937
+b4= -0.0035
+S= 58#subset(redpine,SITE_INDEX_SPP %in%  'PIRE') $ SITE_INDEX %>% median()
+
+(0+b0*(S^b1)*(1-exp(b2*age))^(b3*S^b4)   )*0.3048}
+
+asmod <- function(age){
+b0= 5.2188
+b1= 0.6855
+b2= -0.0301
+b3= 50.0071
+b4= -0.8695
+S= 63#subset(aspen,SITE_INDEX_SPP %in%  c('POGR4','POTR5')) $ SITE_INDEX %>% median()
+(0+b0*(S^b1)*(1-exp(b2*age))^(b3*S^b4)   )*0.3048}
 
 
+# treecurve <- function(age, b1,b2,b3){
+#  
+#   b1*(1-exp(b2*age))^b3 #essentially equivalent to Chapman-Richards Model with additional factors to connect to site index
+# }
+# 
+# mod1 <- nlsLM(chm.max ~ treecurve(age, b1,b2,b3), start = list(
+#   b1= 27.2291 ,b2= -0.0301  ,b3= 1.3630
+# ), data = aspen)
+# fake4 <- predict(mod1, list(age=x1))
+
+
+hmnf.chm2$pred1 <-  asmod(hmnf.chm2$age)
+hmnf.chm2$pred2 <-  rpmod(age = hmnf.chm2$age)
+
+mod <- lm(chm.max~
+               solar+
+               hilly+
+               age+
+               pred1+
+               pred2+
+               toip+
+               toin+
+               bt+
+               tgs+
+               ppt+
+               T150_AWC+
+               T50_sand+
+               T150_sand+
+               T50_clay+
+               T150_clay+
+               T50_OM+
+               T150_OM+
+               T50_pH+
+               Water_Table+
+               wet+
+               spodic+
+               carbdepth+
+               Bhs+
+               jackpine+
+               redpine+
+               whitepine+
+               aspen+
+               oak+
+               maple
+             , data=hmnf.chm2)
+summary(mod)
 
 
 rf <- ranger(chm.max~
            solar+
            hilly+
-           age+
+           #age+
            pred1+
            pred2+
            toip+
@@ -754,17 +800,41 @@ rf <- ranger(chm.max~
            oak+
            maple
          , data=hmnf.chm2,
-         num.trees=500, sample.fraction =0.01, 
-         max.depth = 15,  write.forest = TRUE)
-
-hmnf.chm.25 <- hmnf.chm2 %>% mutate(age=25, pred1 = predict(mod1, list(age = 25)))
-hmnf.chm.50 <- hmnf.chm2
-hmnf.chm.75 <- hmnf.chm2
-hmnf.chm.100 <- hmnf.chm2
-hmnf.chm.150 <- hmnf.chm2
-hmnf.chm.200 <- hmnf.chm2
+         num.trees=500, sample.fraction =0.002, 
+           write.forest = TRUE, importance = 'impurity')
+importance(rf)
 
 
+hmnf.chm.0 <- hmnf.chm2 %>% mutate(age=0, pred1 = 0, pred2 = 0, chm=0)
+hmnf.chm.10 <- hmnf.chm2 %>% mutate(age=10, pred1 = asmod(10), pred2 = rpmod(10))
+hmnf.chm.25 <- hmnf.chm2 %>% mutate(age=25, pred1 = asmod(25), pred2 = rpmod(25))
+hmnf.chm.50 <- hmnf.chm2 %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50))
+hmnf.chm.75 <- hmnf.chm2 %>% mutate(age=75, pred1 = asmod(75), pred2 = rpmod(75))
+hmnf.chm.100 <- hmnf.chm2 %>% mutate(age=100, pred1 = asmod(100), pred2 = rpmod(100))
+hmnf.chm.150 <- hmnf.chm2 %>% mutate(age=150, pred1 = asmod(150), pred2 = rpmod(150))
+hmnf.chm.200 <- hmnf.chm2 %>% mutate(age=200, pred1 = asmod(200), pred2 = rpmod(200))
+hmnf.chm.10 <- hmnf.chm.10 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.10)))
+hmnf.chm.25 <- hmnf.chm.25 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.25)))
+hmnf.chm.50 <- hmnf.chm.50 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.50)))
+hmnf.chm.75 <- hmnf.chm.75 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.75)))
+hmnf.chm.100 <- hmnf.chm.100 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.100)))
+hmnf.chm.150 <- hmnf.chm.150 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.150)))
+hmnf.chm.200 <- hmnf.chm.200 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.200)))
+
+x1<-c(0,10,25,50,75,100,150,200)
+aspen = asmod(x1)
+redpine = rpmod(x1)
+
+hmnf.chm.alltime <-  rbind(hmnf.chm.0,hmnf.chm.10,hmnf.chm.25, hmnf.chm.50,hmnf.chm.75,hmnf.chm.100,hmnf.chm.150,hmnf.chm.200)
+ggplot()+
+  geom_boxplot(aes(x=as.factor(age),y=chm), data=hmnf.chm.alltime)+
+  geom_point(aes(x=as.factor(x1),y=aspen,col='aspen'))+
+  geom_point(aes(x=as.factor(x1),y=redpine,col='red pine'))+
+  scale_color_manual(name='curve',  values = c('aspen'='blue','red pine'='red'))+
+  scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
+  scale_x_discrete(name='Age')
+
+  
 
 
 ### other mountains  ----

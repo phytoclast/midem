@@ -263,6 +263,30 @@ s$Bhs <- ifelse(s$Bhs %in% 'yes', 1,0)
 s$spodosols.up <- s$spodosols*s$Water_Table>100
 s$spodic.up <- s$spodic*s$Water_Table
 s$Bhs.up <- s$Bhs*s$Water_Table
+
+#fill missing awc data ---- 
+s.train <- subset(s, !is.na(T150_AWC)&!is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(T50_pH)&!is.na(Water_Table)&!is.na(spodic)&!is.na(spodosols)&!is.na(Bhs)&!is.na(carbdepth)&!is.na(humicdepth))
+rf.awc <- ranger(T150_AWC ~ T50_sand+T150_sand+T50_clay+T150_clay+T50_OM+T150_OM+T50_pH+Water_Table+spodic+spodosols+Bhs+carbdepth+humicdepth+rockdepth,
+                 data=s.train, num.trees=500, sample.fraction =0.02, 
+                 write.forest = TRUE, importance = 'impurity')
+s.predict <- subset(s, is.na(T150_AWC)&!is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(T50_pH)&!is.na(Water_Table)&!is.na(spodic)&!is.na(spodosols)&!is.na(Bhs)&!is.na(carbdepth)&!is.na(humicdepth))
+
+s.predict$new_AWC <- predictions(predict(rf.awc, data=s.predict))
+s <- left_join(s, unique(s.predict[,c('coiid', 'new_AWC')]))
+s$T150_AWC <- ifelse(is.na(s$T150_AWC),s$new_AWC,s$T150_AWC );s$new_AWC <- NULL
+#fill missing pH data ----
+s$taxsubgrp <- as.factor(s$taxsubgrp) 
+s.train <- subset(s, !is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(T50_pH)&!is.na(Water_Table)&!is.na(spodic)&!is.na(taxsubgrp)&!is.na(Bhs)&!is.na(carbdepth)&!is.na(humicdepth))
+rf.ph <- ranger(T50_pH ~ T50_sand+T150_sand+T50_clay+T150_clay+T50_OM+T150_OM+Water_Table+spodic+taxsubgrp+Bhs+carbdepth+humicdepth+rockdepth,
+                 data=s.train, num.trees=500, sample.fraction =0.02, 
+                 write.forest = TRUE, importance = 'impurity')
+s.predict <- subset(s, !is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(Water_Table)&!is.na(spodic)&!is.na(taxsubgrp)&!is.na(Bhs)&!is.na(carbdepth)&!is.na(humicdepth))
+
+s.predict$new_pH <- predictions(predict(rf.ph, data=s.predict))
+s <- left_join(s, unique(s.predict[,c('coiid', 'new_pH')]))
+s$T50_pH <- ifelse(is.na(s$T50_pH),s$new_pH,s$T50_pH );s$new_pH <- NULL
+write.csv(s, 'C:/workspace/SoilSorts/fy2021-refresh/s.cleaned.csv', row.names = FALSE)
+s <- read.csv('C:/workspace/SoilSorts/fy2021-refresh/s.cleaned.csv')
 s.mu <- s %>% group_by(lmapunitiid=lmapunitiid) %>% summarise(
   T150_AWC = wtd.mean(T150_AWC, weights=comppct_r, na.rm=T),
   T50_sand = wtd.mean(T50_sand, weights=comppct_r, na.rm=T),
@@ -279,6 +303,10 @@ s.mu <- s %>% group_by(lmapunitiid=lmapunitiid) %>% summarise(
   carbdepth = wtd.mean(carbdepth, weights=comppct_r, na.rm=T),
   humicdepth = wtd.mean(humicdepth, weights=comppct_r, na.rm=T)
 )
+
+colnames(s.mu)
+
+
 
 
 mufilter <- unique(hmnf.chm$lmapunitiid)
@@ -511,6 +539,16 @@ ggplot()+
   geom_smooth(aes(x=position, y=chm.max, weight = age, col='white pine'), data = whitepine)+
   geom_smooth(aes(x=position, y=chm.max, weight = age, col='red pine'), data = redpine)+
   geom_smooth(aes(x=position, y=chm.max, weight = age, col='jack pine'), data = jackpine)+
+  scale_color_manual(name='forest type',  values = c('jack pine'='green','red pine'='darkgreen','white pine'='darkcyan',
+                                                     'aspen'='khaki4','oak'='orange','maple'='red'))
+
+ggplot()+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='maple'), data = maple)+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='oak'), data = oak)+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='aspen'), data = aspen)+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='white pine'), data = whitepine)+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='red pine'), data = redpine)+
+  geom_smooth(aes(x=wet, y=chm.max, weight = age, col='jack pine'), data = jackpine)+
   scale_color_manual(name='forest type',  values = c('jack pine'='green','red pine'='darkgreen','white pine'='darkcyan',
                                                      'aspen'='khaki4','oak'='orange','maple'='red'))
 
@@ -768,7 +806,7 @@ mod <- lm(chm.max~
              , data=hmnf.chm2)
 summary(mod)
 
-
+hmnf.chm2$wts <-  ifelse(hmnf.chm2$redpine %in% 1, 1, 1)
 rf <- ranger(chm.max~
            solar+
            hilly+
@@ -800,19 +838,20 @@ rf <- ranger(chm.max~
            oak+
            maple
          , data=hmnf.chm2,
-         num.trees=500, sample.fraction =0.002, 
-           write.forest = TRUE, importance = 'impurity')
+         num.trees=500, sample.fraction =0.002, always.split.variables = c('pred1'),
+           write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+         )
 importance(rf)
 
 
-hmnf.chm.0 <- hmnf.chm2 %>% mutate(age=0, pred1 = 0, pred2 = 0, chm=0)
-hmnf.chm.10 <- hmnf.chm2 %>% mutate(age=10, pred1 = asmod(10), pred2 = rpmod(10))
-hmnf.chm.25 <- hmnf.chm2 %>% mutate(age=25, pred1 = asmod(25), pred2 = rpmod(25))
-hmnf.chm.50 <- hmnf.chm2 %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50))
-hmnf.chm.75 <- hmnf.chm2 %>% mutate(age=75, pred1 = asmod(75), pred2 = rpmod(75))
-hmnf.chm.100 <- hmnf.chm2 %>% mutate(age=100, pred1 = asmod(100), pred2 = rpmod(100))
-hmnf.chm.150 <- hmnf.chm2 %>% mutate(age=150, pred1 = asmod(150), pred2 = rpmod(150))
-hmnf.chm.200 <- hmnf.chm2 %>% mutate(age=200, pred1 = asmod(200), pred2 = rpmod(200))
+hmnf.chm.0 <- hmnf.chm2 %>% mutate(age=0, pred1 = 0, pred2 = 0, chm=0, aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.10 <- hmnf.chm2 %>% mutate(age=10, pred1 = asmod(10), pred2 = rpmod(10), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.25 <- hmnf.chm2 %>% mutate(age=25, pred1 = asmod(25), pred2 = rpmod(25), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.50 <- hmnf.chm2 %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.75 <- hmnf.chm2 %>% mutate(age=75, pred1 = asmod(75), pred2 = rpmod(75), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.100 <- hmnf.chm2 %>% mutate(age=100, pred1 = asmod(100), pred2 = rpmod(100), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.150 <- hmnf.chm2 %>% mutate(age=150, pred1 = asmod(150), pred2 = rpmod(150), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+hmnf.chm.200 <- hmnf.chm2 %>% mutate(age=200, pred1 = asmod(200), pred2 = rpmod(200), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
 hmnf.chm.10 <- hmnf.chm.10 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.10)))
 hmnf.chm.25 <- hmnf.chm.25 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.25)))
 hmnf.chm.50 <- hmnf.chm.50 %>% mutate(chm = predictions(predict(rf, data=hmnf.chm.50)))
@@ -834,9 +873,593 @@ ggplot()+
   scale_y_continuous(name='Canopy Height (m)', breaks=c((0:10)*5))+
   scale_x_discrete(name='Age')
 
+### 90 m predicted SI  ----
+### 
+solar <- rast('D:/GIS/DEM/hmnfsolarmean.tif'); names(solar) = 'solar'
+toip <- rast('D:/GIS/DEM/hmnf-pos-openess.tif'); names(toip) = 'toip'
+toin <- rast('D:/GIS/DEM/hmnf-neg-openess.tif'); names(toin) = 'toin'
+slope <- rast('D:/GIS/DEM/hmnfslope.tif'); names(slope) = 'slope'#radians
+dem <- rast('D:/GIS/DEM/hmnfdem30.tif'); names(dem) = 'dem'
+bt <- rast('D:/scripts/snow/output/bt.90.alt.tif'); names(bt) = 'bt'
+tgs <- rast('D:/scripts/snow/output/tgs.90.alt.tif'); names(tgs) = 'tgs'
+ppt <- rast('C:/a/Ecological_Sites/GIS/Climate/PRISM2010/P/p0112/w001001.adf'); names(ppt) = 'ppt'
+slope.500 <- rast('D:/GIS/DEM/slope.500.tif'); names(slope.500) = 'slope.500'
+
+mukey <- rast('D:/GIS/SOIL/2021/northeast_gssurgo90m.tif'); names(mukey) = 'mukey'
+
+solar <- aggregate(solar, fact=3, fun='mean')
+toip <- aggregate(toip, fact=3, fun='mean')
+toin <- aggregate(toin, fact=3, fun='mean')
+slope <- aggregate(slope, fact=3, fun='mean')
+dem <- aggregate(dem, fact=3, fun='mean')
+slope.500 <- aggregate(slope.500, fact=3, fun='mean')
+hilly <- (slope.500 > 0.05)*1
+hilly <-  focal(hilly, w=focalMat(hilly, 500, type=c('circle')))
+hilly <-  focal(hilly, w=focalMat(hilly, 500, type=c('circle')))
+names(hilly) <- 'hilly'
+bt <- project(bt, dem, method='bilinear')
+tgs <- project(tgs, dem, method='bilinear')
+ppt <- project(ppt, dem, method='bilinear')
+mukey <- project(mukey, dem, method='near')
+
+brk <- c(mukey, solar, toip, toin, dem, slope, hilly, bt, tgs, ppt)
+brk.pts <- as.data.frame(brk, xy=TRUE)
+
+#soils processing
+s <- read.csv('C:/workspace/SoilSorts/fy2021-refresh/s.cleaned.csv')
+s <- subset(s, majcompflag %in% 'TRUE' & !is.na(T150_AWC)&!is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(T50_pH)&!is.na(Water_Table)&!is.na(carbdepth)&!is.na(Bhs))
+colnames(s)
+
+s$spodosols <- ifelse(s$taxorder %in% 'spodosols', 1,0)
+s$spodic <- ifelse(grepl('spodic',s$taxsubgrp)|s$taxorder %in% 'spodosols', 1,0)
+s$Bhs <- ifelse(s$Bhs %in% 'yes', 1,0)
+s$spodosols.up <- s$spodosols*s$Water_Table>100
+s$spodic.up <- s$spodic*s$Water_Table
+s$Bhs.up <- s$Bhs*s$Water_Table
+#need to fix this so that the median ignores missing data
+s.mu <- s %>% group_by(lmapunitiid=lmapunitiid) %>% summarise(
+  T150_AWC = wtd.mean(T150_AWC, weights=comppct_r, na.rm=T),
+  T50_sand = wtd.mean(T50_sand, weights=comppct_r, na.rm=T),
+  T150_sand = wtd.mean(T150_sand, weights=comppct_r, na.rm=T),
+  T50_clay = wtd.mean(T50_clay, weights=comppct_r, na.rm=T),
+  T150_clay = wtd.mean(T150_clay, weights=comppct_r, na.rm=T),
+  T50_OM = wtd.mean(T50_OM, weights=comppct_r, na.rm=T),
+  T150_OM = wtd.mean(T150_OM, weights=comppct_r, na.rm=T),
+  T50_pH = wtd.mean(T50_pH, weights=comppct_r, na.rm=T),
+  Water_Table = wtd.mean(Water_Table, weights=comppct_r, na.rm=T),
+  spodic = wtd.mean(spodic, weights=comppct_r,  na.rm=T),
+  spodosols = wtd.mean(spodosols, weights=comppct_r,  na.rm=T),
+  Bhs = wtd.mean(Bhs, weights=comppct_r,  na.rm=T),
+  carbdepth = wtd.mean(carbdepth, weights=comppct_r,  na.rm=T),
+  humicdepth = wtd.mean(humicdepth, weights=comppct_r, na.rm=T)
+)
+s.mu$wet <- 25/(s.mu$Water_Table+25)
+
+
+
+
+brk.pts <- left_join(brk.pts, s.mu, by=c('mukey'='lmapunitiid'))
+brk.pts <- subset(brk.pts, !is.na(T150_AWC)&!is.na(T50_sand)&!is.na(T150_sand)&!is.na(T50_clay)&!is.na(T150_clay)&!is.na(T50_OM)&!is.na(T150_OM)&!is.na(T50_pH)&!is.na(Water_Table)&!is.na(wet)&!is.na(spodic)&!is.na(carbdepth)&!is.na(Bhs))
+
+saveRDS(brk.pts, 'output/brk.pts.RDS')
+saveRDS(hmnf.chm2, 'output/hmnf.chm3.RDS')
+
+
+
+#model predictions ----
+#
+library(sf)
+library(terra)
+library(raster)
+library(minpack.lm)
+library(growthmodels)
+library(dplyr)
+library(ggplot2)
+library(Hmisc)
+library(MASS)
+library(ranger)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+rpmod <- function(age){
+  b0= 2.0434
+  b1= 0.9978
+  b2= -0.0147
+  b3= 1.0937
+  b4= -0.0035
+  S= 58#subset(redpine,SITE_INDEX_SPP %in%  'PIRE') $ SITE_INDEX %>% median()
   
+  (0+b0*(S^b1)*(1-exp(b2*age))^(b3*S^b4)   )*0.3048}
 
+asmod <- function(age){
+  b0= 5.2188
+  b1= 0.6855
+  b2= -0.0301
+  b3= 50.0071
+  b4= -0.8695
+  S= 63#subset(aspen,SITE_INDEX_SPP %in%  c('POGR4','POTR5')) $ SITE_INDEX %>% median()
+  (0+b0*(S^b1)*(1-exp(b2*age))^(b3*S^b4)   )*0.3048}
 
+brk.pts <- readRDS('output/brk.pts.RDS')
+hmnf.chm2 <- readRDS('output/hmnf.chm3.RDS')
+dem <- rast('D:/GIS/DEM/hmnfdem30.tif'); names(dem) = 'dem'
+brk.pts$toi <- brk.pts$toip-brk.pts$toin
+hmnf.chm2$toi <- hmnf.chm2$toip-hmnf.chm2$toin
+#jack pine si ----
+hmnf.chm2$wts <-  (hmnf.chm2$jackpine %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+rf.jackpine <- ranger(chm.max~
+                        solar+
+                        #hilly+
+                        #age+
+                        pred1+
+                        pred2+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs+
+                        jackpine+
+                        redpine+
+                        whitepine+
+                        aspen+
+                        oak+
+                        maple
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1', 'jackpine'),
+                      write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=0, jackpine=1, redpine=0, whitepine=0)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.jackpine, data=brk.pts.50)))
+
+jackpine.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, jackpine.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(jackpine.si, 'output/jackpine.si.tif', overwrite=T)
+#red pine si  ----
+hmnf.chm2$wts <-  (hmnf.chm2$redpine %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+rf.redpine <- ranger(chm.max~
+                       solar+
+                       #hilly+
+                       #age+
+                       pred1+
+                       pred2+
+                       toip+
+                       toin+
+                       bt+
+                       tgs+
+                       ppt+
+                       T150_AWC+
+                       T50_sand+
+                       T150_sand+
+                       T50_clay+
+                       T150_clay+
+                       T50_OM+
+                       T150_OM+
+                       T50_pH+
+                       Water_Table+
+                       wet+
+                       spodic+
+                       carbdepth+
+                       Bhs+
+                       jackpine+
+                       redpine+
+                       whitepine+
+                       aspen+
+                       oak+
+                       maple
+                     , data=hmnf.chm2,
+                     num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1', 'redpine'),
+                     write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=0, jackpine=0, redpine=1, whitepine=0)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.redpine, data=brk.pts.50)))
+
+redpine.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, redpine.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(redpine.si, 'output/redpine.si.tif', overwrite=T)
+#whitepine si  ----
+hmnf.chm2$wts <-  (hmnf.chm2$whitepine %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+rf.whitepine <- ranger(chm.max~
+                     solar+
+                     #hilly+
+                     #age+
+                     pred1+
+                     pred2+
+                     toip+
+                     toin+
+                     bt+
+                     tgs+
+                     ppt+
+                     T150_AWC+
+                     T50_sand+
+                     T150_sand+
+                     T50_clay+
+                     T150_clay+
+                     T50_OM+
+                     T150_OM+
+                     T50_pH+
+                     Water_Table+
+                     wet+
+                     spodic+
+                     carbdepth+
+                     Bhs+
+                     jackpine+
+                     redpine+
+                     whitepine+
+                     aspen+
+                     oak+
+                     maple
+                   , data=hmnf.chm2,
+                   num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1','whitepine'),
+                   write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=0, jackpine=0, redpine=0, whitepine=1)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.aspen, data=brk.pts.50)))
+
+whitepine.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, whitepine.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(whitepine.si, 'output/whitepine.si.tif', overwrite=T)
+
+#aspen si  ----
+hmnf.chm2$wts <-  (hmnf.chm2$aspen %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+rf.aspen <- ranger(chm.max~
+                     solar+
+                     #hilly+
+                     #age+
+                     pred1+
+                     pred2+
+                     toip+
+                     toin+
+                     bt+
+                     tgs+
+                     ppt+
+                     T150_AWC+
+                     T50_sand+
+                     T150_sand+
+                     T50_clay+
+                     T150_clay+
+                     T50_OM+
+                     T150_OM+
+                     T50_pH+
+                     Water_Table+
+                     wet+
+                     spodic+
+                     carbdepth+
+                     Bhs+
+                     jackpine+
+                     redpine+
+                     whitepine+
+                     aspen+
+                     oak+
+                     maple
+                   , data=hmnf.chm2,
+                   num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1','aspen'),
+                   write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=1, oak=0, maple=0, jackpine=0, redpine=0, whitepine=0)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.aspen, data=brk.pts.50)))
+
+aspen.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, aspen.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(aspen.si, 'output/aspen.si.tif', overwrite=T)
+#oak si  ----
+hmnf.chm2$wts <-  (hmnf.chm2$oak %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+rf.oak <- ranger(chm.max~
+                   solar+
+                   #hilly+
+                   #age+
+                   pred1+
+                   pred2+
+                   toip+
+                   toin+
+                   bt+
+                   tgs+
+                   ppt+
+                   T150_AWC+
+                   T50_sand+
+                   T150_sand+
+                   T50_clay+
+                   T150_clay+
+                   T50_OM+
+                   T150_OM+
+                   T50_pH+
+                   Water_Table+
+                   wet+
+                   spodic+
+                   carbdepth+
+                   Bhs+
+                   jackpine+
+                   redpine+
+                   whitepine+
+                   aspen+
+                   oak+
+                   maple
+                 , data=hmnf.chm2,
+                 num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1', 'oak'),
+                 write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=1, maple=0, jackpine=0, redpine=0, whitepine=0)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.oak, data=brk.pts.50)))
+
+oak.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, oak.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(oak.si, 'output/oak.si.tif', overwrite=T)
+#maple si  ----
+hmnf.chm2$wts <-  (hmnf.chm2$maple %in% 1)*3+(hmnf.chm2$hilly >= 0.5)*3+1
+#To maximize topographic difference in model, I tried more or less weighting of the hilly parameter, and using it as a model input, but it is best to have moderate weight of 3 than no weight or weight of 6, and better not to have as a model input. Also not as good to include toi as an input.
+rf.maple <- ranger(chm.max~
+                   solar+
+                   #hilly+
+                   #age+
+                   pred1+
+                   pred2+
+                   toip+
+                   toin+
+                   bt+
+                   tgs+
+                   ppt+
+                   T150_AWC+
+                   T50_sand+
+                   T150_sand+
+                   T50_clay+
+                   T150_clay+
+                   T50_OM+
+                   T150_OM+
+                   T50_pH+
+                   Water_Table+
+                   wet+
+                   spodic+
+                   carbdepth+
+                   Bhs+
+                   jackpine+
+                   redpine+
+                   whitepine+
+                   aspen+
+                   oak+
+                   maple
+                 , data=hmnf.chm2,
+                 num.trees=500, sample.fraction =0.02, always.split.variables = c('pred1', 'maple'),
+                 write.forest = TRUE, importance = 'impurity', case.weights= hmnf.chm2$wts
+)
+
+brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=1, jackpine=0, redpine=0, whitepine=0)
+brk.pts.50 <- brk.pts.50 %>% mutate(chm = predictions(predict(rf.maple, data=brk.pts.50)))
+
+maple.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, maple.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+
+writeRaster(maple.si, 'output/maple.si.tif', overwrite=T)
+
+plot(maple.si)
+#jack pine prob ----
+hmnf.chm2$wts <-  1
+rf.jackpine <- ranger(jackpine ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.jackpine, data=brk.pts.50)))
+
+jackpine.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, jackpine.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(jackpine.prob, 'output/jackpine.prob.tif', overwrite=T)
+#red pine prob ----
+hmnf.chm2$wts <-  1
+rf.redpine <- ranger(redpine ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.redpine, data=brk.pts.50)))
+
+redpine.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, redpine.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(redpine.prob, 'output/redpine.prob.tif', overwrite=T)
+#whitepine prob ----
+hmnf.chm2$wts <-  1
+rf.whitepine <- ranger(whitepine ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.whitepine, data=brk.pts.50)))
+
+whitepine.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, whitepine.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(whitepine.prob, 'output/whitepine.prob.tif', overwrite=T)
+#aspen prob ----
+hmnf.chm2$wts <-  1
+rf.aspen <- ranger(aspen ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.aspen, data=brk.pts.50)))
+
+aspen.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, aspen.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(aspen.prob, 'output/aspen.prob.tif', overwrite=T)
+#oak prob ----
+hmnf.chm2$wts <-  1
+rf.oak <- ranger(oak ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.oak, data=brk.pts.50)))
+
+oak.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, oak.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(oak.prob, 'output/oak.prob.tif', overwrite=T)
+#maple prob ----
+hmnf.chm2$wts <-  1
+rf.maple <- ranger(maple ~
+                        solar+
+                        hilly+
+                        toip+
+                        toin+
+                        bt+
+                        tgs+
+                        ppt+
+                        T150_AWC+
+                        T50_sand+
+                        T150_sand+
+                        T50_clay+
+                        T150_clay+
+                        T50_OM+
+                        T150_OM+
+                        T50_pH+
+                        Water_Table+
+                        wet+
+                        spodic+
+                        carbdepth+
+                        Bhs
+                      , data=hmnf.chm2,
+                      num.trees=500, sample.fraction =0.02,
+                      write.forest = TRUE, importance = 'impurity'
+)
+
+brk.pts.50 <- brk.pts
+brk.pts.50 <- brk.pts.50 %>% mutate(prob = predictions(predict(rf.maple, data=brk.pts.50)))
+
+maple.prob <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, maple.prob=brk.pts.50$prob), type="xyz", crs=crs(dem))
+
+writeRaster(maple.prob, 'output/maple.prob.tif', overwrite=T)
+
+plot(maple.prob)
+
+v1 <- (jackpine.prob >1/6)*(jackpine.prob >= max(jackpine.prob, whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))
+v3 <- (whitepine.prob >1/6)*(whitepine.prob >= max(jackpine.prob,  whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))*3
+v5 <- (oak.prob >1/6)*(oak.prob >= max(jackpine.prob,  whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))*5
+v6 <- (maple.prob >1/6)*(maple.prob >= max(jackpine.prob,  whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))*6
+v4 <- (aspen.prob >1/6)*(aspen.prob >= max(jackpine.prob,  whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))*4#*(max(v1,v3,v5,v6)==0)
+v2 <- (redpine.prob >1/6)*(redpine.prob >= max(jackpine.prob,  whitepine.prob, oak.prob, maple.prob, aspen.prob, redpine.prob))#*2*(max(v1,v3,v4,v5,v6)==0)
+vegbest <- max(v1,v2, v3, v4, v5, v6)
+plot(vegbest)
+
+writeRaster(vegbest, 'output/vegbest.tif', overwrite=T)
 ### other mountains  ----
 ### 
 

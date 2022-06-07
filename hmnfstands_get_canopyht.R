@@ -1533,28 +1533,100 @@ brk.pts.50 <- brk.pts.50 %>% mutate(resid = predictions(predict(hy.mod, data=brk
 maple.si.topo <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, maple.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
 plot(maple.si.topo)
 writeRaster(maple.si.topo, 'output/maple.si.topo.tif', overwrite=T)
-
+saveRDS(brk.pts.50, 'tmp/brk.pts.50.topo.RDS')
 #ggplot of model ----
-breaks <- (max(brk.pts.50$toi)-min(brk.pts.50$toi))/20*c(0:20)+min(brk.pts.50$toi)
-i=1
-for(i in 1:20){
-chm <- mean(subset(brk.pts.50, toi >= breaks[i] & toi >= breaks[i+1] )$chm)
-toi <- mean(breaks[i],breaks[i+1])
+focalsoil <- subset(hmnf.chm2, Lat > 44.2 & Lat < 44.4 & Long > -85.75 & Long < -85.6)
+brk.pts.50 <- hmnf.chm2 %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=1, jackpine=0, redpine=0, whitepine=0,
+                                 # solar=median(focalsoil$solar),
+                                 # hilly=median(focalsoil$hilly),
+                                 # toip=median(focalsoil$toip),
+                                 # toin=median(focalsoil$toin),
+                                 bt=median(focalsoil$bt),
+                                 tgs=median(focalsoil$tgs),
+                                 ppt=median(focalsoil$ppt),
+                                 p1=median(focalsoil$p1),
+                                 p2=median(focalsoil$p2),
+                                 p3=median(focalsoil$p3),
+                                 p4=median(focalsoil$p4),
+                                 T150_AWC=median(focalsoil$T150_AWC),
+                                 T50_sand=median(focalsoil$T50_sand),
+                                 T150_sand=median(focalsoil$T150_sand),
+                                 T50_clay=median(focalsoil$T50_clay),
+                                 T150_clay=median(focalsoil$T150_clay),
+                                 T50_OM=median(focalsoil$T50_OM),
+                                 T150_OM=median(focalsoil$T150_OM),
+                                 T50_pH=median(focalsoil$T50_pH),
+                                 Water_Table=median(focalsoil$Water_Table),
+                                 wet=median(focalsoil$wet),
+                                 spodic=median(focalsoil$spodic),
+                                 spodosols=median(focalsoil$spodosols),
+                                 carbdepth=median(focalsoil$carbdepth),
+                                 hydric=median(focalsoil$hydric),
+                                 moist=median(focalsoil$moist),
+                                 Bhs=median(focalsoil$Bhs))
 
-if(i==1){simple.df<- as.data.frame(cbind(chm,toi))}else{simple.df<- rbind(simple.df,as.data.frame(cbind(chm,toi)))}
-}
+brk.pts.50 <- brk.pts.50 %>% mutate(resid = predictions(predict(hy.mod, data=brk.pts.50)), chm.lm = predict(linear.mod, newdata=brk.pts.50), chm=chm.lm+resid)
 
+
+
+
+
+brk.pts.50$toi <- brk.pts.50$toip -brk.pts.50$toin
+brk.pts.50$toi <- (brk.pts.50$toi - min(brk.pts.50$toi))/(max(brk.pts.50$toi)-min(brk.pts.50$toi))
+brk.pts.50$normsolar <- (brk.pts.50$solar - mean(brk.pts.50$solar))/(max(brk.pts.50$solar)-min(brk.pts.50$solar))
+mean(brk.pts.50$solar)
+# 
+# 
+# breaks.solar <- (max(brk.pts.50$solar)-min(brk.pts.50$solar))/20*c(0:20)+min(brk.pts.50$solar)
+# breaks.toin <- (max(brk.pts.50$toin)-min(brk.pts.50$toin))/20*c(0:20)+min(brk.pts.50$toin)
+# breaks.toip <- (max(brk.pts.50$toip)-min(brk.pts.50$toip))/20*c(0:20)+min(brk.pts.50$toip)
+# i=1
+# for(i in 1:20){
+#   for(j in 1:20){  
+#     for(k in 1:20){
+# chm <- mean(subset(brk.pts.50, toin >= breaks.toin[i] & toin >= breaks.toin[i+1] &
+#                      toip >= breaks.toip[j] & toip >= breaks.toip[j+1] &
+#                      solar >= breaks.solar[j] & solar >= breaks.solar[j+1] )$chm)
+# toin <- mean(breaks.toin[i],breaks.toin[i+1])
+# toip <- mean(breaks.toip[j],breaks.toip[j+1])
+# solar <- mean(breaks.solar[k],breaks.solar[k+1])
+# 
+# if(i==1&j==1){simple.df<- as.data.frame(cbind(chm,toin,toip,solar))}else{simple.df<- rbind(simple.df,as.data.frame(cbind(chm,toin,toip,solar)))}
+# }}}
+# saveRDS(simple.df, 'tmp/simple.df.RDS')
+# 
+# 
+# Get percentiles for each slope position and sun position and then plot all three factors
+# 
 ggplot()+
-   geom_smooth(aes(x=toi, y=chm, col='Maple'), data= simple.df)+
- 
-  scale_color_manual(name='site',  values = c('position'='black'
+  geom_smooth(aes(x=toi, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
   ))+
   scale_y_continuous(name='Canopy Height (m)')+
   scale_x_continuous(name='position')+
   #coord_fixed(ratio=2/1,ylim=c(0,40))+
   labs(title = 'Maple SI by slope position')
 
+ggplot()+
+  geom_smooth(aes(x=normsolar, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='solar')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by solar exposure')
 
+ggplot()+
+  geom_smooth(aes(x=ppt, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='MAP')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Mean Annual Precipitation')
 
 
 

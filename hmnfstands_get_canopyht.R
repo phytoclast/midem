@@ -1537,33 +1537,34 @@ saveRDS(brk.pts.50, 'tmp/brk.pts.50.topo.RDS')
 #ggplot of model ----
 focalsoil <- subset(hmnf.chm2, Lat > 44.2 & Lat < 44.4 & Long > -85.75 & Long < -85.6)
 brk.pts.50 <- hmnf.chm2 %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), aspen=0, oak=0, maple=1, jackpine=0, redpine=0, whitepine=0,
-                                 # solar=median(focalsoil$solar),
-                                 # hilly=median(focalsoil$hilly),
-                                 # toip=median(focalsoil$toip),
-                                 # toin=median(focalsoil$toin),
+                                 solar=median(focalsoil$solar),
+                                 hilly=median(focalsoil$hilly),
+                                 toip=median(focalsoil$toip),
+                                 toin=median(focalsoil$toin),
                                  bt=median(focalsoil$bt),
                                  tgs=median(focalsoil$tgs),
                                  ppt=median(focalsoil$ppt),
                                  p1=median(focalsoil$p1),
                                  p2=median(focalsoil$p2),
                                  p3=median(focalsoil$p3),
-                                 p4=median(focalsoil$p4),
-                                 T150_AWC=median(focalsoil$T150_AWC),
-                                 T50_sand=median(focalsoil$T50_sand),
-                                 T150_sand=median(focalsoil$T150_sand),
-                                 T50_clay=median(focalsoil$T50_clay),
-                                 T150_clay=median(focalsoil$T150_clay),
-                                 T50_OM=median(focalsoil$T50_OM),
-                                 T150_OM=median(focalsoil$T150_OM),
-                                 T50_pH=median(focalsoil$T50_pH),
-                                 Water_Table=median(focalsoil$Water_Table),
-                                 wet=median(focalsoil$wet),
-                                 spodic=median(focalsoil$spodic),
-                                 spodosols=median(focalsoil$spodosols),
-                                 carbdepth=median(focalsoil$carbdepth),
-                                 hydric=median(focalsoil$hydric),
-                                 moist=median(focalsoil$moist),
-                                 Bhs=median(focalsoil$Bhs))
+                                 p4=median(focalsoil$p4)
+                                 # T150_AWC=median(focalsoil$T150_AWC),
+                                 # T50_sand=median(focalsoil$T50_sand),
+                                 # T150_sand=median(focalsoil$T150_sand),
+                                 # T50_clay=median(focalsoil$T50_clay),
+                                 # T150_clay=median(focalsoil$T150_clay),
+                                 # T50_OM=median(focalsoil$T50_OM),
+                                 # T150_OM=median(focalsoil$T150_OM),
+                                 # T50_pH=median(focalsoil$T50_pH),
+                                 # Water_Table=median(focalsoil$Water_Table),
+                                 # wet=median(focalsoil$wet),
+                                 # spodic=median(focalsoil$spodic),
+                                 # spodosols=median(focalsoil$spodosols),
+                                 # carbdepth=median(focalsoil$carbdepth),
+                                 # hydric=median(focalsoil$hydric),
+                                 # moist=median(focalsoil$moist),
+                                 # Bhs=median(focalsoil$Bhs)
+                                 )
 
 brk.pts.50 <- brk.pts.50 %>% mutate(resid = predictions(predict(hy.mod, data=brk.pts.50)), chm.lm = predict(linear.mod, newdata=brk.pts.50), chm=chm.lm+resid)
 
@@ -1628,9 +1629,105 @@ ggplot()+
   #coord_fixed(ratio=2/1,ylim=c(0,40))+
   labs(title = 'Maple SI by Mean Annual Precipitation')
 
-
-
-
+ggplot()+
+  geom_smooth(aes(x=T150_AWC, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='AWC (cm)')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Available Water Holding Capacity')
+ggplot()+
+  geom_smooth(aes(x=Water_Table, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='Water Table (cm)')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Water Table')
+ggplot()+
+  geom_smooth(aes(x=T150_clay, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='Clay %')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by % Clay in top 150 cm')
+ggplot()+
+  geom_smooth(aes(x=T150_sand, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='Sand %')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by % Sand in top 150 cm')
+ggplot()+
+  geom_smooth(aes(x=T150_AWC, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table > 150,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='AWC (cm)')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Available Water Holding Capacity of Well Drained Soils')
+ggplot()+
+  geom_smooth(aes(x=spodosols, y=chm, col='Maple'), data= brk.pts.50)+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='Spodosols')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Spodosol status')
+ggplot()+
+  geom_smooth(aes(x=spodosols, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table > 150,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='Spodosols')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Spodosol status, well drained only')
+ggplot()+
+  geom_smooth(aes(x=T50_pH, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table > 150,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='pH')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by pH, well drained only')
+ggplot()+
+  geom_smooth(aes(x=T50_pH, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table <= 25,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='pH')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by pH top 50 cm, hydric only')
+ggplot()+
+  geom_smooth(aes(x=T150_OM, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table > 150,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='OM%')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Organic Matter, top 150 cm, well drained only')
+ggplot()+
+  geom_smooth(aes(x=T150_OM, y=chm, col='Maple'), data= brk.pts.50[brk.pts.50$Water_Table <= 25,])+
+  
+  scale_color_manual(name='site',  values = c('model'='black'
+  ))+
+  scale_y_continuous(name='Canopy Height (m)')+
+  scale_x_continuous(name='OM%')+
+  #coord_fixed(ratio=2/1,ylim=c(0,40))+
+  labs(title = 'Maple SI by Organic Matter, top 150 cm, hydric only')
 #boosted ----
 # require(gbm)
 # require(MASS)#package with the boston housing dataset

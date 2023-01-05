@@ -91,7 +91,6 @@ ggplot()+
   geom_point(aes(x=age, y=chm),data=redpine, col='red', alpha=0.02)+
   geom_line(aes(x=x1,y=pred), col='black')
 
-summary(mod)
 
 redpine <- subset(hmnf.chm, EV_CODE %in% 2 & !is.na(chm) & !is.na(age) & age >= 5 & chm >=0.1)
 x <- redpine$age
@@ -347,7 +346,7 @@ library(terra)
 library(raster)
 library(minpack.lm)
 library(growthmodels)
-library(plyr)
+# library(plyr)
 library(dplyr)
 library(ggplot2)
 library(Hmisc)
@@ -1340,11 +1339,11 @@ brk.pts.50 <- brk.pts %>% mutate(age=50, pred1 = asmod(50), pred2 = rpmod(50), a
 )
 
 
-brk.pts.50 <- brk.pts.50 %>% mutate(chm = predict(linear.mod, newdata=brk.pts.50))
-
-generic.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, generic.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
-plot(generic.si)
-writeRaster(generic.si, 'output/generic.si.lm.tif', overwrite=T)
+# brk.pts.50 <- brk.pts.50 %>% mutate(chm = predict(linear.mod, newdata=brk.pts.50))
+# 
+# generic.si <- rast(cbind(x=brk.pts.50$x, y=brk.pts.50$y, generic.si=brk.pts.50$chm), type="xyz", crs=crs(dem))
+# plot(generic.si)
+# writeRaster(generic.si, 'output/generic.si.lm.tif', overwrite=T)
 
 
 
